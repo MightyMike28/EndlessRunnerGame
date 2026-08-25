@@ -49,9 +49,10 @@ export class Game extends Scene
         this.currentLane = 1;
         this.isMoving = false;
 
+        // Sedikit dinaikkan agar tidak terlalu dekat dengan kontrol bawah
         this.player = this.add.rectangle(
             this.lanes[this.currentLane],
-            height * 0.80,
+            height * 0.76,
             50,
             70,
             0x00aaff
@@ -101,40 +102,47 @@ export class Game extends Scene
         // TOUCH BUTTONS
         // -------------------------
 
+        // Tombol dinaikkan agar aman dari Android navigation bar
+        const touchButtonY = height * 0.86;
+
+        // Area sentuh dibuat sedikit lebih besar
+        const touchButtonWidth = 120;
+        const touchButtonHeight = 75;
+
         this.leftButton = this.add.rectangle(
             width * 0.20,
-            height * 0.92,
-            100,
-            60,
+            touchButtonY,
+            touchButtonWidth,
+            touchButtonHeight,
             0x555555,
             0.8
         ).setInteractive();
 
         this.add.text(
             width * 0.20,
-            height * 0.92,
+            touchButtonY,
             '<',
             {
-                fontSize: '32px',
+                fontSize: '38px',
                 color: '#ffffff'
             }
         ).setOrigin(0.5);
 
         this.rightButton = this.add.rectangle(
             width * 0.80,
-            height * 0.92,
-            100,
-            60,
+            touchButtonY,
+            touchButtonWidth,
+            touchButtonHeight,
             0x555555,
             0.8
         ).setInteractive();
 
         this.add.text(
             width * 0.80,
-            height * 0.92,
+            touchButtonY,
             '>',
             {
-                fontSize: '32px',
+                fontSize: '38px',
                 color: '#ffffff'
             }
         ).setOrigin(0.5);
