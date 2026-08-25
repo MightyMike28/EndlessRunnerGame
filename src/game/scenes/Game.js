@@ -61,12 +61,35 @@ export class Game extends Scene
             }
         ).setOrigin(0.5);
 
-        // Keyboard
+        // -------------------------
+        // SCORE
+        // -------------------------
+
+        this.startTime = this.time.now;
+        this.score = 0;
+
+        this.scoreText = this.add.text(
+            20,
+            20,
+            'Score: 0',
+            {
+                fontSize: '24px',
+                color: '#ffffff'
+            }
+        );
+
+        // -------------------------
+        // KEYBOARD
+        // -------------------------
+
         this.cursors = this.input.keyboard.createCursorKeys();
         this.keyA = this.input.keyboard.addKey('A');
         this.keyD = this.input.keyboard.addKey('D');
 
-        // Tombol touch kiri
+        // -------------------------
+        // TOUCH BUTTONS
+        // -------------------------
+
         this.leftButton = this.add.rectangle(
             width * 0.20,
             height * 0.92,
@@ -86,7 +109,6 @@ export class Game extends Scene
             }
         ).setOrigin(0.5);
 
-        // Tombol touch kanan
         this.rightButton = this.add.rectangle(
             width * 0.80,
             height * 0.92,
@@ -116,16 +138,28 @@ export class Game extends Scene
             this.moveRight();
         });
 
-        // Obstacle system
-        this.obstacles = [];
+        // -------------------------
+        // OBSTACLE SYSTEM
+        // -------------------------
 
-        this.obstacleSpeed = 250;
+        this.obstacles = [];
 
         this.gameEnded = false;
 
-        this.spawnTimer = this.time.addEvent({
-            delay: 1500,
-            callback: this.spawnObstacle,
+        // Nilai awal difficulty
+        this.obstacleSpeed = 250;
+        this.spawnDelay = 1500;
+
+        // Batas difficulty
+        this.maxObstacleSpeed = 650;
+        this.minSpawnDelay = 500;
+
+        this.createSpawnTimer();
+
+        // Difficulty naik setiap 10 detik
+        this.difficultyTimer = this.time.addEvent({
+            delay: 10000,
+            callback: this.increaseDifficulty,
             callbackScope: this,
             loop: true
         });
@@ -138,7 +172,20 @@ export class Game extends Scene
             return;
         }
 
-        // Keyboard kiri
+        // -------------------------
+        // SCORE BERDASARKAN WAKTU
+        // -------------------------
+
+        this.score = Math.floor((time - this.startTime) / 1000);
+
+        this.scoreText.setText(
+            'Score: ' + this.score
+        );
+
+        // -------------------------
+        // INPUT
+        // -------------------------
+
         if (
             Input.Keyboard.JustDown(this.cursors.left) ||
             Input.Keyboard.JustDown(this.keyA)
@@ -147,7 +194,6 @@ export class Game extends Scene
             this.moveLeft();
         }
 
-        // Keyboard kanan
         if (
             Input.Keyboard.JustDown(this.cursors.right) ||
             Input.Keyboard.JustDown(this.keyD)
@@ -156,7 +202,10 @@ export class Game extends Scene
             this.moveRight();
         }
 
-        // Gerakkan dan cek obstacle
+        // -------------------------
+        // OBSTACLE MOVEMENT
+        // -------------------------
+
         for (let i = this.obstacles.length - 1; i >= 0; i--)
         {
             const obstacle = this.obstacles[i];
@@ -175,13 +224,28 @@ export class Game extends Scene
                 return;
             }
 
-            // Hapus obstacle yang sudah keluar layar
+            // Cleanup
             if (obstacle.y > this.scale.height + 100)
             {
                 obstacle.destroy();
                 this.obstacles.splice(i, 1);
             }
         }
+    }
+
+    createSpawnTimer()
+    {
+        if (this.spawnTimer)
+        {
+            this.spawnTimer.remove();
+        }
+
+        this.spawnTimer = this.time.addEvent({
+            delay: this.spawnDelay,
+            callback: this.spawnObstacle,
+            callbackScope: this,
+            loop: true
+        });
     }
 
     spawnObstacle()
@@ -204,6 +268,37 @@ export class Game extends Scene
         obstacle.laneIndex = laneIndex;
 
         this.obstacles.push(obstacle);
+    }
+
+    increaseDifficulty()
+    {
+        if (this.gameEnded)
+        {
+            return;
+        }
+
+        // Obstacle makin cepat
+        this.obstacleSpeed = Math.min(
+            this.obstacleSpeed + 50,
+            this.maxObstacleSpeed
+        );
+
+        // Spawn makin sering
+        this.spawnDelay = Math.max(
+            this.spawnDelay - 100,
+            this.minSpawnDelay
+        );
+
+        // Buat ulang timer menggunakan delay baru
+        this.createSpawnTimer();
+
+        console.log(
+            'Difficulty increased:',
+            'Speed =',
+            this.obstacleSpeed,
+            'Spawn Delay =',
+            this.spawnDelay
+        );
     }
 
     moveLeft()
@@ -234,7 +329,11 @@ export class Game extends Scene
         this.gameEnded = true;
 
         this.spawnTimer.remove();
+        this.difficultyTimer.remove();
 
-        this.scene.start('GameOver');
+        // Kirim score ke GameOver
+        this.scene.start('GameOver', {
+            score: this.score
+        });
     }
 }

@@ -7,6 +7,11 @@ export class GameOver extends Scene
         super('GameOver');
     }
 
+    init(data)
+    {
+        this.finalScore = data.score || 0;
+    }
+
     create()
     {
         const width = this.scale.width;
@@ -16,7 +21,7 @@ export class GameOver extends Scene
 
         this.add.text(
             width / 2,
-            height * 0.35,
+            height * 0.30,
             'GAME OVER',
             {
                 fontSize: '48px',
@@ -25,9 +30,19 @@ export class GameOver extends Scene
             }
         ).setOrigin(0.5);
 
+        this.add.text(
+            width / 2,
+            height * 0.43,
+            'Score: ' + this.finalScore,
+            {
+                fontSize: '30px',
+                color: '#ffffff'
+            }
+        ).setOrigin(0.5);
+
         const restartButton = this.add.text(
             width / 2,
-            height * 0.55,
+            height * 0.58,
             'PLAY AGAIN',
             {
                 fontSize: '30px',
@@ -49,7 +64,7 @@ export class GameOver extends Scene
 
         const menuButton = this.add.text(
             width / 2,
-            height * 0.68,
+            height * 0.70,
             'MAIN MENU',
             {
                 fontSize: '22px',
