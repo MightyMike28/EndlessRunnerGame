@@ -24,7 +24,6 @@ export class Game extends Scene
             width * 0.75
         ];
 
-        // Garis pemisah lane
         this.add.rectangle(
             width * 0.375,
             height / 2,
@@ -47,10 +46,7 @@ export class Game extends Scene
         // PLAYER
         // -------------------------
 
-        // Player mulai di lane tengah
         this.currentLane = 1;
-
-        // Mencegah input bertumpuk saat player sedang berpindah lane
         this.isMoving = false;
 
         this.player = this.add.rectangle(
@@ -61,13 +57,18 @@ export class Game extends Scene
             0x00aaff
         );
 
-        this.add.text(
+        // -------------------------
+        // HUD / TITLE
+        // -------------------------
+
+        this.titleText = this.add.text(
             width / 2,
-            30,
+            55,
             'ENDLESS RUNNER',
             {
-                fontSize: '28px',
-                color: '#ffffff'
+                fontSize: '24px',
+                color: '#ffffff',
+                fontStyle: 'bold'
             }
         ).setOrigin(0.5);
 
@@ -75,15 +76,15 @@ export class Game extends Scene
         // SCORE
         // -------------------------
 
-        this.startTime = this.time.now;
+        this.elapsedTime = 0;
         this.score = 0;
 
         this.scoreText = this.add.text(
-            20,
-            20,
+            16,
+            16,
             'Score: 0',
             {
-                fontSize: '24px',
+                fontSize: '20px',
                 color: '#ffffff'
             }
         );
@@ -138,7 +139,6 @@ export class Game extends Scene
             }
         ).setOrigin(0.5);
 
-        // Touch menggunakan fungsi movement yang sama dengan keyboard
         this.leftButton.on('pointerdown', () =>
         {
             this.moveLeft();
@@ -156,21 +156,17 @@ export class Game extends Scene
         this.obstacles = [];
         this.gameEnded = false;
 
-        // Menyimpan informasi spawn sebelumnya
         this.lastSpawnLane = -1;
         this.sameLaneCount = 0;
 
-        // Difficulty awal
         this.obstacleSpeed = 250;
         this.spawnDelay = 1500;
 
-        // Batas difficulty agar permainan tetap masuk akal
         this.maxObstacleSpeed = 550;
         this.minSpawnDelay = 750;
 
         this.createSpawnTimer();
 
-        // Difficulty meningkat setiap 10 detik
         this.difficultyTimer = this.time.addEvent({
             delay: 10000,
             callback: this.increaseDifficulty,
@@ -187,11 +183,13 @@ export class Game extends Scene
         }
 
         // -------------------------
-        // SCORE BERDASARKAN WAKTU
+        // SCORE
         // -------------------------
 
+        this.elapsedTime += delta;
+
         this.score = Math.floor(
-            (time - this.startTime) / 1000
+            this.elapsedTime / 1000
         );
 
         this.scoreText.setText(
@@ -199,7 +197,7 @@ export class Game extends Scene
         );
 
         // -------------------------
-        // KEYBOARD INPUT
+        // INPUT
         // -------------------------
 
         if (
@@ -226,10 +224,8 @@ export class Game extends Scene
         {
             const obstacle = this.obstacles[i];
 
-            // Gerakkan obstacle berdasarkan delta time
             obstacle.y += this.obstacleSpeed * (delta / 1000);
 
-            // Collision detection
             if (
                 Geom.Intersects.RectangleToRectangle(
                     this.player.getBounds(),
@@ -241,7 +237,6 @@ export class Game extends Scene
                 return;
             }
 
-            // Hapus obstacle yang sudah keluar layar
             if (obstacle.y > this.scale.height + 100)
             {
                 obstacle.destroy();
@@ -256,7 +251,6 @@ export class Game extends Scene
 
     createSpawnTimer()
     {
-        // Hapus timer sebelumnya jika ada
         if (this.spawnTimer)
         {
             this.spawnTimer.remove();
@@ -279,8 +273,6 @@ export class Game extends Scene
 
         let laneIndex;
 
-        // Pilih lane secara acak.
-        // Lane yang sama maksimal muncul 2 kali berturut-turut.
         do
         {
             laneIndex = PhaserMath.Between(0, 2);
@@ -290,7 +282,6 @@ export class Game extends Scene
             this.sameLaneCount >= 2
         );
 
-        // Catat pola spawn
         if (laneIndex === this.lastSpawnLane)
         {
             this.sameLaneCount++;
@@ -302,7 +293,6 @@ export class Game extends Scene
 
         this.lastSpawnLane = laneIndex;
 
-        // Buat obstacle
         const obstacle = this.add.rectangle(
             this.lanes[laneIndex],
             -60,
@@ -311,14 +301,13 @@ export class Game extends Scene
             0xff3333
         );
 
-        // Simpan lane obstacle
         obstacle.laneIndex = laneIndex;
 
         this.obstacles.push(obstacle);
     }
 
     // -------------------------
-    // DIFFICULTY SCALING
+    // DIFFICULTY
     // -------------------------
 
     increaseDifficulty()
@@ -328,19 +317,16 @@ export class Game extends Scene
             return;
         }
 
-        // Kecepatan obstacle meningkat
         this.obstacleSpeed = Math.min(
             this.obstacleSpeed + 50,
             this.maxObstacleSpeed
         );
 
-        // Interval spawn semakin pendek
         this.spawnDelay = Math.max(
             this.spawnDelay - 100,
             this.minSpawnDelay
         );
 
-        // Buat ulang timer menggunakan interval terbaru
         this.createSpawnTimer();
 
         console.log(
@@ -411,11 +397,9 @@ export class Game extends Scene
 
         this.gameEnded = true;
 
-        // Hentikan timer
         this.spawnTimer.remove();
         this.difficultyTimer.remove();
 
-        // Kirim score ke GameOver
         this.scene.start('GameOver', {
             score: this.score
         });
