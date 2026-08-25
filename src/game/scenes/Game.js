@@ -1,4 +1,4 @@
-import { Scene, Input, Math as PhaserMath } from 'phaser';
+import { Scene, Input, Math as PhaserMath, Geom } from 'phaser';
 
 export class Game extends Scene
 {
@@ -51,7 +51,6 @@ export class Game extends Scene
             0x00aaff
         );
 
-        // Judul
         this.add.text(
             width / 2,
             30,
@@ -117,16 +116,13 @@ export class Game extends Scene
             this.moveRight();
         });
 
-        // -------------------------
-        // OBSTACLE SYSTEM
-        // -------------------------
-
+        // Obstacle system
         this.obstacles = [];
 
-        // Kecepatan obstacle awal
         this.obstacleSpeed = 250;
 
-        // Spawn obstacle setiap 1500 ms
+        this.gameEnded = false;
+
         this.spawnTimer = this.time.addEvent({
             delay: 1500,
             callback: this.spawnObstacle,
@@ -137,6 +133,11 @@ export class Game extends Scene
 
     update(time, delta)
     {
+        if (this.gameEnded)
+        {
+            return;
+        }
+
         // Keyboard kiri
         if (
             Input.Keyboard.JustDown(this.cursors.left) ||
@@ -155,14 +156,26 @@ export class Game extends Scene
             this.moveRight();
         }
 
-        // Gerakkan obstacle ke bawah
+        // Gerakkan dan cek obstacle
         for (let i = this.obstacles.length - 1; i >= 0; i--)
         {
             const obstacle = this.obstacles[i];
 
             obstacle.y += this.obstacleSpeed * (delta / 1000);
 
-            // Hapus obstacle jika sudah keluar layar
+            // Collision detection
+            if (
+                Geom.Intersects.RectangleToRectangle(
+                    this.player.getBounds(),
+                    obstacle.getBounds()
+                )
+            )
+            {
+                this.endGame();
+                return;
+            }
+
+            // Hapus obstacle yang sudah keluar layar
             if (obstacle.y > this.scale.height + 100)
             {
                 obstacle.destroy();
@@ -173,7 +186,11 @@ export class Game extends Scene
 
     spawnObstacle()
     {
-        // Pilih lane secara acak: 0, 1, atau 2
+        if (this.gameEnded)
+        {
+            return;
+        }
+
         const laneIndex = PhaserMath.Between(0, 2);
 
         const obstacle = this.add.rectangle(
@@ -205,5 +222,19 @@ export class Game extends Scene
             this.currentLane++;
             this.player.x = this.lanes[this.currentLane];
         }
+    }
+
+    endGame()
+    {
+        if (this.gameEnded)
+        {
+            return;
+        }
+
+        this.gameEnded = true;
+
+        this.spawnTimer.remove();
+
+        this.scene.start('GameOver');
     }
 }
