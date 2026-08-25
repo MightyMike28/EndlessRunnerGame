@@ -1,4 +1,4 @@
-import { Scene, Input } from 'phaser';
+import { Scene, Input, Math as PhaserMath } from 'phaser';
 
 export class Game extends Scene
 {
@@ -14,12 +14,14 @@ export class Game extends Scene
 
         this.cameras.main.setBackgroundColor('#202020');
 
+        // Posisi 3 lane
         this.lanes = [
             width * 0.25,
             width * 0.50,
             width * 0.75
         ];
 
+        // Garis pemisah lane
         this.add.rectangle(
             width * 0.375,
             height / 2,
@@ -38,6 +40,7 @@ export class Game extends Scene
             0.3
         );
 
+        // Player
         this.currentLane = 1;
 
         this.player = this.add.rectangle(
@@ -48,14 +51,19 @@ export class Game extends Scene
             0x00aaff
         );
 
-        this.add.text(width / 2, 30, 'ENDLESS RUNNER', {
-            fontSize: '28px',
-            color: '#ffffff'
-        }).setOrigin(0.5);
+        // Judul
+        this.add.text(
+            width / 2,
+            30,
+            'ENDLESS RUNNER',
+            {
+                fontSize: '28px',
+                color: '#ffffff'
+            }
+        ).setOrigin(0.5);
 
         // Keyboard
         this.cursors = this.input.keyboard.createCursorKeys();
-
         this.keyA = this.input.keyboard.addKey('A');
         this.keyD = this.input.keyboard.addKey('D');
 
@@ -108,10 +116,28 @@ export class Game extends Scene
         {
             this.moveRight();
         });
+
+        // -------------------------
+        // OBSTACLE SYSTEM
+        // -------------------------
+
+        this.obstacles = [];
+
+        // Kecepatan obstacle awal
+        this.obstacleSpeed = 250;
+
+        // Spawn obstacle setiap 1500 ms
+        this.spawnTimer = this.time.addEvent({
+            delay: 1500,
+            callback: this.spawnObstacle,
+            callbackScope: this,
+            loop: true
+        });
     }
 
-    update()
+    update(time, delta)
     {
+        // Keyboard kiri
         if (
             Input.Keyboard.JustDown(this.cursors.left) ||
             Input.Keyboard.JustDown(this.keyA)
@@ -120,6 +146,7 @@ export class Game extends Scene
             this.moveLeft();
         }
 
+        // Keyboard kanan
         if (
             Input.Keyboard.JustDown(this.cursors.right) ||
             Input.Keyboard.JustDown(this.keyD)
@@ -127,6 +154,39 @@ export class Game extends Scene
         {
             this.moveRight();
         }
+
+        // Gerakkan obstacle ke bawah
+        for (let i = this.obstacles.length - 1; i >= 0; i--)
+        {
+            const obstacle = this.obstacles[i];
+
+            obstacle.y += this.obstacleSpeed * (delta / 1000);
+
+            // Hapus obstacle jika sudah keluar layar
+            if (obstacle.y > this.scale.height + 100)
+            {
+                obstacle.destroy();
+                this.obstacles.splice(i, 1);
+            }
+        }
+    }
+
+    spawnObstacle()
+    {
+        // Pilih lane secara acak: 0, 1, atau 2
+        const laneIndex = PhaserMath.Between(0, 2);
+
+        const obstacle = this.add.rectangle(
+            this.lanes[laneIndex],
+            -60,
+            60,
+            60,
+            0xff3333
+        );
+
+        obstacle.laneIndex = laneIndex;
+
+        this.obstacles.push(obstacle);
     }
 
     moveLeft()
@@ -134,7 +194,6 @@ export class Game extends Scene
         if (this.currentLane > 0)
         {
             this.currentLane--;
-
             this.player.x = this.lanes[this.currentLane];
         }
     }
@@ -144,7 +203,6 @@ export class Game extends Scene
         if (this.currentLane < 2)
         {
             this.currentLane++;
-
             this.player.x = this.lanes[this.currentLane];
         }
     }
