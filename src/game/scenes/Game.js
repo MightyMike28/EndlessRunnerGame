@@ -14,7 +14,10 @@ export class Game extends Scene
 
         this.cameras.main.setBackgroundColor('#202020');
 
-        // Posisi 3 lane
+        // -------------------------
+        // LANE
+        // -------------------------
+
         this.lanes = [
             width * 0.25,
             width * 0.50,
@@ -40,8 +43,15 @@ export class Game extends Scene
             0.3
         );
 
-        // Player
+        // -------------------------
+        // PLAYER
+        // -------------------------
+
+        // Player mulai di lane tengah
         this.currentLane = 1;
+
+        // Mencegah input bertumpuk saat player sedang berpindah lane
+        this.isMoving = false;
 
         this.player = this.add.rectangle(
             this.lanes[this.currentLane],
@@ -128,6 +138,7 @@ export class Game extends Scene
             }
         ).setOrigin(0.5);
 
+        // Touch menggunakan fungsi movement yang sama dengan keyboard
         this.leftButton.on('pointerdown', () =>
         {
             this.moveLeft();
@@ -143,20 +154,23 @@ export class Game extends Scene
         // -------------------------
 
         this.obstacles = [];
-
         this.gameEnded = false;
 
-        // Nilai awal difficulty
+        // Menyimpan informasi spawn sebelumnya
+        this.lastSpawnLane = -1;
+        this.sameLaneCount = 0;
+
+        // Difficulty awal
         this.obstacleSpeed = 250;
         this.spawnDelay = 1500;
 
-        // Batas difficulty
-        this.maxObstacleSpeed = 650;
-        this.minSpawnDelay = 500;
+        // Batas difficulty agar permainan tetap masuk akal
+        this.maxObstacleSpeed = 550;
+        this.minSpawnDelay = 750;
 
         this.createSpawnTimer();
 
-        // Difficulty naik setiap 10 detik
+        // Difficulty meningkat setiap 10 detik
         this.difficultyTimer = this.time.addEvent({
             delay: 10000,
             callback: this.increaseDifficulty,
@@ -176,14 +190,16 @@ export class Game extends Scene
         // SCORE BERDASARKAN WAKTU
         // -------------------------
 
-        this.score = Math.floor((time - this.startTime) / 1000);
+        this.score = Math.floor(
+            (time - this.startTime) / 1000
+        );
 
         this.scoreText.setText(
             'Score: ' + this.score
         );
 
         // -------------------------
-        // INPUT
+        // KEYBOARD INPUT
         // -------------------------
 
         if (
@@ -210,6 +226,7 @@ export class Game extends Scene
         {
             const obstacle = this.obstacles[i];
 
+            // Gerakkan obstacle berdasarkan delta time
             obstacle.y += this.obstacleSpeed * (delta / 1000);
 
             // Collision detection
@@ -224,7 +241,7 @@ export class Game extends Scene
                 return;
             }
 
-            // Cleanup
+            // Hapus obstacle yang sudah keluar layar
             if (obstacle.y > this.scale.height + 100)
             {
                 obstacle.destroy();
@@ -233,8 +250,13 @@ export class Game extends Scene
         }
     }
 
+    // -------------------------
+    // SPAWN MANAGEMENT
+    // -------------------------
+
     createSpawnTimer()
     {
+        // Hapus timer sebelumnya jika ada
         if (this.spawnTimer)
         {
             this.spawnTimer.remove();
@@ -255,8 +277,32 @@ export class Game extends Scene
             return;
         }
 
-        const laneIndex = PhaserMath.Between(0, 2);
+        let laneIndex;
 
+        // Pilih lane secara acak.
+        // Lane yang sama maksimal muncul 2 kali berturut-turut.
+        do
+        {
+            laneIndex = PhaserMath.Between(0, 2);
+        }
+        while (
+            laneIndex === this.lastSpawnLane &&
+            this.sameLaneCount >= 2
+        );
+
+        // Catat pola spawn
+        if (laneIndex === this.lastSpawnLane)
+        {
+            this.sameLaneCount++;
+        }
+        else
+        {
+            this.sameLaneCount = 1;
+        }
+
+        this.lastSpawnLane = laneIndex;
+
+        // Buat obstacle
         const obstacle = this.add.rectangle(
             this.lanes[laneIndex],
             -60,
@@ -265,10 +311,15 @@ export class Game extends Scene
             0xff3333
         );
 
+        // Simpan lane obstacle
         obstacle.laneIndex = laneIndex;
 
         this.obstacles.push(obstacle);
     }
+
+    // -------------------------
+    // DIFFICULTY SCALING
+    // -------------------------
 
     increaseDifficulty()
     {
@@ -277,19 +328,19 @@ export class Game extends Scene
             return;
         }
 
-        // Obstacle makin cepat
+        // Kecepatan obstacle meningkat
         this.obstacleSpeed = Math.min(
             this.obstacleSpeed + 50,
             this.maxObstacleSpeed
         );
 
-        // Spawn makin sering
+        // Interval spawn semakin pendek
         this.spawnDelay = Math.max(
             this.spawnDelay - 100,
             this.minSpawnDelay
         );
 
-        // Buat ulang timer menggunakan delay baru
+        // Buat ulang timer menggunakan interval terbaru
         this.createSpawnTimer();
 
         console.log(
@@ -301,23 +352,55 @@ export class Game extends Scene
         );
     }
 
+    // -------------------------
+    // PLAYER MOVEMENT
+    // -------------------------
+
     moveLeft()
     {
-        if (this.currentLane > 0)
+        if (this.currentLane > 0 && !this.isMoving)
         {
             this.currentLane--;
-            this.player.x = this.lanes[this.currentLane];
+            this.isMoving = true;
+
+            this.tweens.add({
+                targets: this.player,
+                x: this.lanes[this.currentLane],
+                duration: 120,
+                ease: 'Power2',
+
+                onComplete: () =>
+                {
+                    this.isMoving = false;
+                }
+            });
         }
     }
 
     moveRight()
     {
-        if (this.currentLane < 2)
+        if (this.currentLane < 2 && !this.isMoving)
         {
             this.currentLane++;
-            this.player.x = this.lanes[this.currentLane];
+            this.isMoving = true;
+
+            this.tweens.add({
+                targets: this.player,
+                x: this.lanes[this.currentLane],
+                duration: 120,
+                ease: 'Power2',
+
+                onComplete: () =>
+                {
+                    this.isMoving = false;
+                }
+            });
         }
     }
+
+    // -------------------------
+    // GAME OVER
+    // -------------------------
 
     endGame()
     {
@@ -328,6 +411,7 @@ export class Game extends Scene
 
         this.gameEnded = true;
 
+        // Hentikan timer
         this.spawnTimer.remove();
         this.difficultyTimer.remove();
 
